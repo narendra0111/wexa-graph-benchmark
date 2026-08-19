@@ -6,6 +6,46 @@ A reproducible benchmark suite comparing five graph databases using the same pub
 
 > **NOTE**: This section will be populated with actual benchmark results after running the full suite. No numbers are fabricated — all performance data comes from measured benchmark runs.
 
+### Data Loading
+
+| Database | Total Load Time (s) | Nodes/sec | Rels/sec |
+|----------|---------------------|-----------|----------|
+| CognoDB  | _Failed_ | _Failed_ | _Failed_ |
+| Neo4j    | _Failed_ | _Failed_ | _Failed_ |
+| Memgraph | 834.5 | 755.5 | 976.4 |
+| FalkorDB | 18.6 | 183979.6 | 18217.3 |
+| ArangoDB | 589.6 | 1278.8 | 1078.7 |
+
+### Traversals & Lookups (p95 latency in ms)
+
+| Database | Point Lookup | 1-Hop Traversal | 2-Hop Traversal | 3-Hop Traversal |
+|----------|--------------|-----------------|-----------------|-----------------|
+| CognoDB  | - | - | - | - |
+| Neo4j    | - | - | - | - |
+| Memgraph | 788.10 | 717.59 | 630.14 | 626.74 |
+| FalkorDB | 0.35 | 0.33 | 0.33 | 3.13 |
+| ArangoDB | 550.77 | 446.19 | 498.74 | 512.07 |
+
+### Analytics / Aggregation
+
+| Database | Degree Distribution (p95 ms) |
+|----------|------------------------------|
+| CognoDB  | - |
+| Neo4j    | - |
+| Memgraph | 1462.74 |
+| FalkorDB | 913.32 |
+| ArangoDB | 6458.39 |
+
+### Concurrent Mixed Workload (Throughput / QPS)
+
+| Database | Concurrency: 1 | Concurrency: 10 | Concurrency: 40 |
+|----------|----------------|-----------------|-----------------|
+| CognoDB  | - | - | - |
+| Neo4j    | - | - | - |
+| Memgraph | 1.76 | 19.16 | 67.33 |
+| FalkorDB | 242.8 | 1453.5 | 4273.6 |
+| ArangoDB | 2.30 | 15.70 | 54.86 |
+
 ## Databases Tested
 
 | Database   | Type                   | Why Selected |
@@ -33,11 +73,11 @@ A reproducible benchmark suite comparing five graph databases using the same pub
 
 | Database | Tier | vCPU | RAM | Storage | Notes |
 |----------|------|------|-----|---------|-------|
-| CognoDB  | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
-| Neo4j    | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
-| Memgraph | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
-| FalkorDB | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
-| ArangoDB | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
+| CognoDB  | Free Cloud | 0.5 (burstable) | 512 MB | 1 GB | Primary subject |
+| Neo4j    | Aura Free | Shared | Abstract | Abstract | Strict limit of 400k relationships |
+| Memgraph | Cloud Trial | Shared | 2 GB | Included | Expires in 14 days |
+| FalkorDB | Docker (Local) | 1 | 512 MB | Local | Cloud free tier (100MB) too small; self-hosted locally to match CognoDB RAM |
+| ArangoDB | Free Trial | Configurable | ~4 GB | Included | Gives significant hardware advantage over CognoDB |
 
 ## Dataset
 
@@ -115,17 +155,25 @@ FOR v IN 3..3 OUTBOUND @start GRAPH "social" RETURN DISTINCT v.uid
 
 > Charts will be inserted here after running the benchmarks.
 
-## Analysis
+## Analysis & Conclusions
 
-> Analysis will be written after benchmarks produce actual data.
+### Failures and Honest Caveats
+1. **Neo4j Aura Free limit exceeded**: Despite sampling the dataset down to 300,000 edges to fit Neo4j's 400,000 relationship limit, the dataset yielded 398,372 unique nodes. Neo4j strictly limits nodes to 200,000 on its free tier, so the data load failed and Neo4j was excluded from the run.
+2. **CognoDB Disconnection**: CognoDB's connection dropped mid-benchmark ("Failed to read from defunct connection"). The free cloud tier could not sustain the ingestion/query workload.
+3. **FalkorDB Local Advantage & Initial OOM**: FalkorDB was run locally via Docker rather than the cloud (to avoid its 100MB cloud memory limit). This gave it an inherent 0ms network latency advantage, artificially inflating its QPS and lowering its latency compared to Memgraph and ArangoDB (which suffered from cloud HTTP/Bolt round-trip times). During an initial test, FalkorDB OOM'd at 512 MB RAM during the mixed workload, requiring a container restart, demonstrating the vulnerability of in-memory stores under strict constraints.
+
+### Performance Conclusions
+- **ArangoDB vs Memgraph**: ArangoDB provided faster load times and better traversal latencies across the board, but struggled with degree aggregations compared to Memgraph. Memgraph pulled ahead slightly in the concurrent mixed workloads (67 QPS vs 54 QPS).
+- Both ArangoDB and Memgraph had a significantly higher RAM provision in their trial tiers (~4GB and 2GB respectively) compared to the 512MB we used for FalkorDB.
 
 ## Caveats
 
-- **Cloud/network latency**: Results include network round-trip time to cloud-hosted databases
-- **Free-tier throttling**: Some platforms may throttle free-tier instances under load
-- **Resource differences**: Exact vCPU/RAM parity across all platforms is not achievable
-- **Query language differences**: CognoDB/Neo4j/Memgraph/FalkorDB use Cypher; ArangoDB uses AQL — queries are logically equivalent but execution engines differ
-- **Dataset sampling**: The full soc-Pokec dataset (30.6M edges) was sampled to 300k edges to fit free-tier storage limits
+- **Cloud/network latency**: Results include network round-trip time to cloud-hosted databases (CognoDB, Neo4j, Memgraph).
+- **FalkorDB network advantage**: Because FalkorDB's cloud free tier was strictly limited to 100MB RAM (which could OOM on our dataset), we elected to run FalkorDB via Docker locally with matched resources (512 MB RAM, 1 CPU). This gives FalkorDB an inherent latency advantage since it bypasses the internet, which must be considered when analyzing its latency numbers.
+- **Free-tier throttling**: Some platforms may throttle free-tier instances under load.
+- **Resource differences**: Exact vCPU/RAM parity across all platforms is not achievable, but we matched FalkorDB locally to CognoDB's 512 MB.
+- **Query language differences**: CognoDB/Neo4j/Memgraph/FalkorDB use Cypher; ArangoDB uses AQL — queries are logically equivalent but execution engines differ.
+- **Dataset sampling**: The full soc-Pokec dataset (30.6M edges) was sampled to 300k edges to fit free-tier storage limits.
 
 ## Reproducibility
 
