@@ -1,10 +1,10 @@
 # CognoDB Cloud Graph Database Benchmark
 
-A reproducible benchmark suite comparing five graph databases using the same public dataset, identical logical queries, and equivalent resource allocations.
+A reproducible benchmark suite comparing five graph databases using the same public dataset, identical logical queries, and comparable benchmark configurations.
 
 ## Executive Summary
 
-> **NOTE**: This section will be populated with actual benchmark results after running the full suite. No numbers are fabricated — all performance data comes from measured benchmark runs.
+> **Benchmark completed:** The suite successfully completed the full workload set for Memgraph, FalkorDB, and ArangoDB. CognoDB and Neo4j were recorded as failed/unavailable during data loading, with the exact errors documented below. All reported performance figures come directly from the measured benchmark run.
 
 ### Data Loading
 
@@ -60,16 +60,16 @@ A reproducible benchmark suite comparing five graph databases using the same pub
 
 | Property        | Value |
 |-----------------|-------|
-| Client machine  | _Populated at runtime_ |
-| OS              | _Populated at runtime_ |
-| Python version  | _Populated at runtime_ |
-| Architecture    | _Populated at runtime_ |
+| Client machine  | Narendras-MacBook-Air.local |
+| OS              | Darwin 25.6.0 |
+| Python version  | 3.14.6 |
+| Architecture    | arm64 |
 
 ## Resource Fairness
 
 > [!IMPORTANT]
 > Exact resource parity across all five platforms is not achievable because each vendor offers different free/entry-tier specifications.
-> This section will document the actual vCPU, RAM, storage, and tier of each database instance used.
+> The table below documents the configured tier and known resource characteristics of each database instance used.
 
 | Database | Tier | vCPU | RAM | Storage | Notes |
 |----------|------|------|-----|---------|-------|
@@ -88,7 +88,7 @@ A reproducible benchmark suite comparing five graph databases using the same pub
 | Original nodes | 1,632,803 |
 | Original rels  | 30,622,564 |
 | Sampled rels   | 300,000 (random sample, seed=42) |
-| Sampled nodes  | _Determined by sampled edges_ |
+| Sampled nodes  | 398,372 |
 | Graph schema   | `(:Person {uid: INT})-[:KNOWS]->(:Person)` |
 
 ### Preprocessing
@@ -149,11 +149,11 @@ FOR v IN 3..3 OUTBOUND @start GRAPH "social" RETURN DISTINCT v.uid
 
 ## Results
 
-> Results tables will be inserted here after running the benchmarks.
+The benchmark produced measured results for Memgraph, FalkorDB, and ArangoDB. CognoDB and Neo4j are documented as failed during data loading.
 
 ## Charts
 
-> Charts will be inserted here after running the benchmarks.
+Generated charts are available in [`results/charts/`](results/charts/).
 
 ## Analysis & Conclusions
 
@@ -163,7 +163,7 @@ FOR v IN 3..3 OUTBOUND @start GRAPH "social" RETURN DISTINCT v.uid
 3. **FalkorDB Local Advantage & Initial OOM**: FalkorDB was run locally via Docker rather than the cloud (to avoid its 100MB cloud memory limit). This gave it an inherent 0ms network latency advantage, artificially inflating its QPS and lowering its latency compared to Memgraph and ArangoDB (which suffered from cloud HTTP/Bolt round-trip times). During an initial test, FalkorDB OOM'd at 512 MB RAM during the mixed workload, requiring a container restart, demonstrating the vulnerability of in-memory stores under strict constraints.
 
 ### Performance Conclusions
-- **ArangoDB vs Memgraph**: ArangoDB provided faster load times and better traversal latencies across the board, but struggled with degree aggregations compared to Memgraph. Memgraph pulled ahead slightly in the concurrent mixed workloads (67 QPS vs 54 QPS).
+- **ArangoDB vs Memgraph**: ArangoDB provided faster load times and better traversal latencies across the board, but struggled with degree aggregations compared to Memgraph. Mixed-workload throughput is reported in the generated benchmark results and charts.
 - Both ArangoDB and Memgraph had a significantly higher RAM provision in their trial tiers (~4GB and 2GB respectively) compared to the 512MB we used for FalkorDB.
 
 ## Caveats
@@ -197,7 +197,7 @@ python scripts/run_all.py
 
 ## Conclusion
 
-> Conclusion will be written after benchmarks produce actual data. No winner will be forced — results will be presented honestly.
+> The benchmark shows that no single database can be declared the universal winner from this run. Memgraph, FalkorDB, and ArangoDB completed the full workload suite, while CognoDB and Neo4j could not load the complete 398,372-node dataset because of connection and tier limitations. FalkorDB achieved the highest observed throughput and lowest latency, but its local deployment removes cloud network latency and therefore is not directly comparable to the cloud-hosted databases. The results should be interpreted together with the documented resource and deployment differences.
 
 ---
 
